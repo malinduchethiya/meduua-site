@@ -116,6 +116,309 @@
 <div class="modal" id="projectModal" hidden role="dialog" aria-modal="true" aria-labelledby="projectModalTitle"><div class="modal-panel"><button class="modal-close" type="button" data-close aria-label="Close project details">×</button><span class="project-mini" id="projectType">STUDIO EXPLORATION</span><h2 id="projectModalTitle">Project name</h2><p id="projectText"></p><div class="project-meta"><div><span>INDUSTRY</span><strong id="projectIndustry"></strong></div><div><span>APPROACH</span><strong id="projectApproach"></strong></div></div><button class="submit-btn" type="button" data-open-contact>Plan a project like this <span>↗</span></button></div></div>
 <div class="modal" id="contactModal" hidden role="dialog" aria-modal="true" aria-labelledby="contactModalTitle"><div class="modal-panel"><button class="modal-close" type="button" data-close aria-label="Close enquiry form">×</button><div class="modal-head"><div class="modal-head-top"><span class="eyebrow section-kicker">LET'S TALK ABOUT YOUR PROJECT</span><span class="modal-badge">Quick Enquiry</span></div><h2 id="contactModalTitle">Start something <span class="serif">good.</span></h2><p>Share a few details below and we'll get back to you with a tailored plan.</p></div><form id="enquiryForm"><div class="form-grid"><div class="field"><label for="clientName"><span class="field-index">01</span> Your name *</label><input id="clientName" name="name" maxlength="100" required placeholder="e.g. Kasun Perera" autocomplete="name"></div><div class="field"><label for="clientMobile"><span class="field-index">02</span> Mobile number *</label><input id="clientMobile" name="mobile" type="tel" inputmode="numeric" pattern="[0-9+\s\-]{7,18}" maxlength="18" required placeholder="e.g. 0703090130" autocomplete="tel"></div><div class="field"><label for="projectTypeInput"><span class="field-index">03</span> Project type</label><select id="projectTypeInput" name="kind"><option value="1">Business website</option><option value="2">Hotel / tourism website</option><option value="3">Café / restaurant website</option><option value="4">Portfolio website</option><option value="5">Online store</option><option value="6">Something else</option></select></div><div class="field"><label for="clientPackage"><span class="field-index">04</span> Interested package</label><select id="clientPackage" name="package"><option value="1">Essential — Rs. 10,000</option><option value="2">Growth — Rs. 15,000</option><option value="3">Signature — Rs. 20,000</option></select></div><div class="field full"><div class="field-label-row"><label for="clientBrief"><span class="field-index">05</span> Tell us a little about it *</label><span class="field-hint" id="briefCounter">0 / 1500</span></div><textarea id="clientBrief" name="brief" required maxlength="1500" placeholder="Tell us about your business, timeline, and what you want to build..."></textarea></div></div><div class="form-footer"><button class="submit-btn" id="submitEnquiryBtn" type="submit"><span>Submit project enquiry</span><span>↗</span></button><div class="modal-foot-row"><p class="modal-small">Saved securely to MEDUUA® studio database.</p></div></div></form></div></div>
 <div class="toast" id="toast" role="status" hidden></div>
+<script>
+(() => {
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  window.scrollTo(0, 0);
+  window.addEventListener('load', () => {
+    window.scrollTo(0, 0);
+  });
+
+  const SUPABASE_URL = 'https://eslhjwkcmeljheaximqn.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_1mEPMotiqasPXJ4U5Qu2rg_xl3Bc-pL';
+  const SUPABASE_TABLE = 'contacts';
+
+  const navButton = document.getElementById('menuToggle');
+  const drawer = document.getElementById('mobileDrawer');
+
+  function setDrawer(open) {
+    if (!drawer || !navButton) return;
+    drawer.classList.toggle('open', open);
+    drawer.setAttribute('aria-hidden', String(!open));
+    navButton.setAttribute('aria-expanded', String(open));
+    navButton.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    navButton.innerHTML = open
+      ? '<span aria-hidden="true" style="font-size:26px;line-height:1">×</span>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h18M3 16h18"/></svg>';
+  }
+
+  if (navButton && drawer) {
+    navButton.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
+    drawer.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setDrawer(false)));
+  }
+
+  document.querySelectorAll('.filter').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const category = btn.dataset.filter;
+      document.querySelectorAll('.filter').forEach((x) => {
+        const chosen = x === btn;
+        x.classList.toggle('active', chosen);
+        x.setAttribute('aria-pressed', String(chosen));
+      });
+      document.querySelectorAll('.work-card').forEach((x) =>
+        x.classList.toggle('hide', category !== 'all' && x.dataset.category !== category)
+      );
+    })
+  );
+
+  document.querySelectorAll('.service').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const active = btn.classList.contains('active');
+      document.querySelectorAll('.service').forEach((x) => {
+        x.classList.remove('active');
+        x.setAttribute('aria-expanded', 'false');
+      });
+      if (!active) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    })
+  );
+
+  document.querySelectorAll('.faq-question').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.faq-item');
+      if (!item) return;
+      const next = !item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach((x) => {
+        x.classList.remove('open');
+        const q = x.querySelector('button');
+        if (q) q.setAttribute('aria-expanded', 'false');
+      });
+      if (next) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    })
+  );
+
+  const projects = {
+    salt: {
+      type: 'WEBSITE CONCEPT',
+      name: 'Salt & Stone',
+      text: 'An editorial coastal hospitality experience: quiet typography, generous spacing, tactile colour and a booking-first page structure. Developed as a boutique hotel website concept.',
+      industry: 'Hospitality',
+      approach: 'Editorial / understated',
+    },
+    unframed: {
+      type: 'STUDIO EXPLORATION',
+      name: 'The Unframed',
+      text: 'A bold art-gallery direction that puts creative work ahead of interface conventions. Graphic colour, expansive typography and gallery-focused composition.',
+      industry: 'Art & Culture',
+      approach: 'Experimental / expressive',
+    },
+    cafe: {
+      type: 'VISUAL DIRECTION',
+      name: 'One Love Café',
+      text: 'A warm and playful design direction for a café presence, built around personality, appetising visual rhythm and an easy path to menus and enquiries.',
+      industry: 'Food & Beverage',
+      approach: 'Playful / warm',
+    },
+    ceylono: {
+      type: 'WEBSITE CONCEPT',
+      name: 'Ceylono',
+      text: 'An immersive Sri Lankan travel concept combining destination storytelling with confident visual identity, large-scale imagery and approachable navigation.',
+      industry: 'Travel & Tourism',
+      approach: 'Story-led / vibrant',
+    },
+  };
+
+  const projectModal = document.getElementById('projectModal');
+  const contactModal = document.getElementById('contactModal');
+  let previousFocus = null;
+
+  function show(modal) {
+    if (!modal) return;
+    previousFocus = document.activeElement;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    const closeBtn = modal.querySelector('[data-close]');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function close(modal) {
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    if (previousFocus && typeof previousFocus.focus === 'function') {
+      previousFocus.focus();
+    }
+  }
+
+  function showToast(messageHtml, durationMs = 5000) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.innerHTML = messageHtml;
+    toast.hidden = false;
+    window.setTimeout(() => {
+      toast.hidden = true;
+    }, durationMs);
+  }
+
+  document.querySelectorAll('[data-project]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const x = projects[btn.dataset.project];
+      if (!x) return;
+      document.getElementById('projectType').textContent = x.type;
+      document.getElementById('projectModalTitle').textContent = x.name;
+      document.getElementById('projectText').textContent = x.text;
+      document.getElementById('projectIndustry').textContent = x.industry;
+      document.getElementById('projectApproach').textContent = x.approach;
+      show(projectModal);
+    })
+  );
+
+  document.querySelectorAll('[data-close]').forEach((btn) =>
+    btn.addEventListener('click', () => close(btn.closest('.modal')))
+  );
+
+  document.querySelectorAll('.modal').forEach((modal) =>
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) close(modal);
+    })
+  );
+
+  const openContact = () => {
+    if (projectModal && !projectModal.hidden) close(projectModal);
+    show(contactModal);
+  };
+
+  const openContactBtn = document.getElementById('openContact');
+  if (openContactBtn) openContactBtn.addEventListener('click', openContact);
+
+  const modalOpenContactBtn = document.querySelector('[data-open-contact]');
+  if (modalOpenContactBtn) modalOpenContactBtn.addEventListener('click', openContact);
+
+  document.querySelectorAll('[data-package]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const pkgSelect = document.getElementById('clientPackage');
+      if (pkgSelect && btn.dataset.package) {
+        pkgSelect.value = btn.dataset.package;
+      }
+      openContact();
+    })
+  );
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (contactModal && !contactModal.hidden) close(contactModal);
+      else if (projectModal && !projectModal.hidden) close(projectModal);
+      else setDrawer(false);
+    }
+    if (e.key === 'Tab') {
+      const modal =
+        contactModal && !contactModal.hidden
+          ? contactModal
+          : projectModal && !projectModal.hidden
+            ? projectModal
+            : null;
+      if (!modal) return;
+      const nodes = [
+        ...modal.querySelectorAll(
+          'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])'
+        ),
+      ].filter((x) => x.getClientRects().length);
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+
+  const enquiryForm = document.getElementById('enquiryForm');
+  const submitBtn = document.getElementById('submitEnquiryBtn');
+  const briefInput = document.getElementById('clientBrief');
+  const briefCounter = document.getElementById('briefCounter');
+
+  if (briefInput && briefCounter) {
+    briefInput.addEventListener('input', () => {
+      briefCounter.textContent = `${briefInput.value.length} / 1500`;
+    });
+  }
+
+  if (enquiryForm) {
+    enquiryForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      if (!form.reportValidity()) return;
+
+      const name = document.getElementById('clientName').value.trim();
+      const rawMobile = document.getElementById('clientMobile').value.trim();
+      const mobileDigits = rawMobile.replace(/\D/g, '');
+      const mobileNumberVal = mobileDigits ? Number(mobileDigits) : NaN;
+      const projectTypeVal = Number(document.getElementById('projectTypeInput').value || 1);
+      const packageDetailsVal = Number(document.getElementById('clientPackage').value || 1);
+      const informations = document.getElementById('clientBrief').value.trim();
+
+      if (!name || !informations || Number.isNaN(mobileNumberVal)) {
+        showToast('Please enter a valid numeric mobile number.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Submitting...</span><span>↗</span>';
+      }
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            name,
+            'mobile number': mobileNumberVal,
+            'package details': packageDetailsVal,
+            'project type': projectTypeVal,
+            informations,
+          }),
+        });
+
+        if (!response.ok) {
+          let errMsg = `HTTP ${response.status}`;
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.message) errMsg = errJson.message;
+          } catch (_) {}
+          showToast(`Could not submit enquiry: ${errMsg}`, 7000);
+          return;
+        }
+
+        form.reset();
+        if (briefCounter) briefCounter.textContent = '0 / 1500';
+        close(contactModal);
+        showToast('Thank you! Your project enquiry has been saved. ✳', 5000);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unexpected network error';
+        showToast(`Submission failed: ${msg}`, 6000);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Submit project enquiry</span><span>↗</span>';
+        }
+      }
+    });
+  }
+
+  const yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+})();
+</script>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
